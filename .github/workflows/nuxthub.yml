@@ -36,5 +36,5 @@ jobs:
       - name: Build & Deploy to NuxtHub
         uses: nuxt-hub/action@v2
         with:
-          project-key: nuxthub-better--xlxb
+          project-key: nuxthub-better--qren
           directory: playground
