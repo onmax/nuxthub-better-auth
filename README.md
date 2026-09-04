@@ -1,64 +1,194 @@
-# NuxtHub x BetterAuth
+# NuxtHub × Better Auth
 
-A demo of using [BetterAuth](https://better-auth.com) with [NuxtHub](https://hub.nuxt.com) (Cloudflare Pages with D1 & KV).
+A Nuxt 4 authentication template using [Nuxt Better Auth](https://better-auth.nuxt.dev),
+NuxtHub, and Nuxt UI. Deploy to **Cloudflare Workers with D1** or **Vercel with
+Turso**. Both use the same SQLite schema and server-side session checks.
 
-https://better-auth.nuxt.dev
+## Run locally
 
-[![Deploy to NuxtHub](https://hub.nuxt.com/button.svg)](https://admin.hub.nuxt.com/new?repo=atinux/nuxthub-better-auth)
+Use Node 22.19+, 24.11+, or 26+, with [Corepack](https://github.com/nodejs/corepack) installed.
 
-## Features
+1. Create a repository from this template, clone it, and copy `.env.example` to `.env`:
 
-- Server-Side rendering on Cloudflare Workers
-- [SQL Database](https://hub.nuxt.com/docs/features/database) on the edge
-- Use [Key Value Storage](https://hub.nuxt.com/docs/features/kv) as secondary storage for sessions, etc.
-- `useAuth()` Vue composable for easy authentication
-- `serverAuth()` composable for accessing Better Auth instance on the server
-- One click deploy on 275+ locations for free
+   ```bash
+   cp .env.example .env
+   ```
 
-## Setup
+2. Generate an auth secret, then copy the output into `NUXT_BETTER_AUTH_SECRET` in `.env`:
 
-Make sure to install the dependencies with [pnpm](https://pnpm.io/installation#using-corepack):
+   ```bash
+   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+   ```
 
-```bash
-pnpm install
-```
+   Keep `NUXT_PUBLIC_SITE_URL=http://localhost:3000` for local development.
+   Leave the Cloudflare and Turso variables empty to use local SQLite.
 
-Copy the `.env.example` file to `.env` and update the variables with your own values.
+3. Install dependencies, create the schema, and start Nuxt:
 
-The `BETTER_AUTH_SECRET` should be a random string of your choosing used by Better Auth for encryption and generating hashes.
+   ```bash
+   corepack enable
+   pnpm install
+   pnpm db:migrate
+   pnpm dev
+   ```
 
-The `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` should be your GitHub OAuth application credentials (see [create an OAuth application](https://github.com/settings/applications/new)).
+Open [localhost:3000](http://localhost:3000). Create an account with the sign-up
+form or continue anonymously. The database is stored in `.data/db/sqlite.db`.
 
-The `NUXT_UI_PRO_LICENSE` should be your Nuxt UI Pro license key (only required for production), if you don't have one, you can purchase one [here](https://ui.nuxt.com/pro).
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-pnpm dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-pnpm build
-```
+New databases contain **no demo users or public-password accounts**.
+The initial migration creates a new schema; existing installations need a
+separate data-migration plan.
+`/user` and `/secret` require a session. `/admin` additionally requires the
+`admin` role. API handlers enforce these checks independently of page navigation.
+The example admin role can read the admin endpoint but cannot manage other users.
 
 ## Deploy
 
-Deploy the application on the Edge with [NuxtHub](https://hub.nuxt.com) on your Cloudflare account:
+Use separate database environments for development, previews, and production.
+Apply schema migrations before each deployment. Neither deployment path requires
+the optional demo accounts.
+
+### Cloudflare Workers with D1
+
+Authenticate Wrangler and create a D1 database:
 
 ```bash
-npx nuxthub deploy
+pnpm exec wrangler login
+pnpm exec wrangler d1 create nuxthub-better-auth
 ```
 
-Then checkout your server logs, analaytics and more in the [NuxtHub Admin](https://admin.hub.nuxt.com).
+Set `NUXT_HUB_CLOUDFLARE_DATABASE_ID` in `.env` to the returned ID.
+Change the Worker name in `nuxt.config.ts` for your fork.
+Keep `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` unset; NuxtHub selects Turso
+when both are present, even with a Cloudflare preset.
 
-You can also deploy using [Cloudflare Pages CI](https://hub.nuxt.com/docs/getting-started/deploy#cloudflare-pages-ci).
+```bash
+pnpm build:cloudflare
+pnpm exec wrangler d1 migrations apply DB --config .output/server/wrangler.json --remote
+pnpm exec wrangler deploy --config .output/server/wrangler.json --var NUXT_PUBLIC_SITE_URL:https://your-worker.workers.dev
+pnpm exec wrangler secret put NUXT_BETTER_AUTH_SECRET --config .output/server/wrangler.json
+```
 
-### Database Migrations
+Enter the strong secret generated for this deployment when prompted.
+The first deployment is not ready for auth traffic until the secret is set.
+NuxtHub generates the Wrangler config with the `DB` binding and migrations
+directory. Pass that config explicitly to D1 commands; `wrangler deploy` does
+not apply migrations.
 
-Right now, we don't automatically run migrations on deployment. You can manually run them by visiting the `/api/migrate` endpoint after deploying.
+### Vercel with Turso
+
+Link a Vercel project and connect a Turso database:
+
+```bash
+pnpm dlx vercel@latest link
+pnpm dlx vercel@latest integration add tursocloud --plan starter --name nuxthub-better-auth-db
+```
+
+The integration may require browser authorization. It supplies
+`TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`. Alternatively, configure credentials
+for your own Turso database. Keep `NUXT_HUB_CLOUDFLARE_DATABASE_ID` unset.
+
+Configure the production secret and HTTPS origin, then migrate and deploy:
+
+```bash
+pnpm dlx vercel@latest env add NUXT_BETTER_AUTH_SECRET production
+pnpm dlx vercel@latest env add NUXT_PUBLIC_SITE_URL production
+pnpm dlx vercel@latest env run -e production -- env -u VERCEL -u VERCEL_ENV pnpm db:migrate
+pnpm dlx vercel@latest deploy --prod
+```
+
+Configure a separate secret and database for previews. Check the integration's
+environment assignments; previews must not point at the production database.
+For changing preview URLs, leave `NUXT_PUBLIC_SITE_URL` unset so the auth module
+uses the request origin. For OAuth previews, use a stable preview origin and
+register its callback with GitHub. Local development uses `.env` as described above.
+
+The `env -u` arguments preserve the downloaded Turso credentials but prevent
+the migration command from being treated as a Vercel build. Builds deliberately
+disable automatic migrations and read database credentials at runtime, so build
+credentials are not embedded in the bundle.
+
+### Node with local SQLite
+
+```bash
+pnpm db:migrate
+pnpm build:node
+node --env-file=.env .output/server/index.mjs
+```
+
+Set `NUXT_PUBLIC_SITE_URL` to your HTTPS origin and persist `.data/db/sqlite.db`
+across releases. Run behind a trusted reverse proxy that forwards a reliable
+client IP for rate limiting.
+
+## Optional demo accounts
+
+Only seed a disposable demo or test database. Both accounts use the public
+password `nuxthub-demo`: `user@nuxthub.demo` and `admin@nuxthub.demo`.
+
+For local SQLite:
+
+```bash
+pnpm db:seed:demo
+```
+
+For a dedicated Turso demo database, set its `TURSO_DATABASE_URL` and
+`TURSO_AUTH_TOKEN` in `.env`, then run the same command. Existing process
+environment variables take precedence over `.env`. The seed command never
+loads `.env.local` implicitly.
+
+For a dedicated D1 demo database, build its config first, then run:
+
+```bash
+pnpm exec wrangler d1 execute DB --config .output/server/wrangler.json --remote --file scripts/demo-users.sql
+```
+
+Set `NUXT_PUBLIC_DEMO_ACCOUNTS_ENABLED=true` in the app's runtime environment to
+show the User and Admin quick-login buttons. Seeding and showing the buttons
+are separate opt-ins. Hiding the buttons does not remove accounts or disable
+their passwords.
+
+If upgrading an earlier demo deployment, its seeded users remain in the
+database. Use a fresh database for a real application.
+
+## Optional GitHub OAuth
+
+Create a [GitHub OAuth app](https://github.com/settings/developers) with this
+local callback URL:
+
+```text
+http://localhost:3000/api/auth/callback/github
+```
+
+Set `NUXT_GITHUB_CLIENT_ID`, `NUXT_GITHUB_CLIENT_SECRET`, and
+`NUXT_PUBLIC_GITHUB_AUTH_ENABLED=true` in `.env`. Use the corresponding HTTPS
+callback and runtime variables on either Cloudflare or Vercel. Store the client
+secret as a Worker secret or a private Vercel environment variable, never public
+runtime config. Previous deployments must rename `GITHUB_CLIENT_ID` and
+`GITHUB_CLIENT_SECRET` to their `NUXT_` equivalents.
+
+Users can link GitHub from `/user`. Test sign-in and linking with your own OAuth
+app before deployment. Do not link a personal GitHub account to a shared demo user.
+
+## Nuxt conventions
+
+`useUserSession()` provides the shared SSR-hydrated session. Form inputs use local
+`ref` state; action composables provide pending and error state. Do not copy the
+session into another store or a module-level ref.
+
+Relative `useFetch` requests forward cookies during SSR. User-specific keys keep
+data separate when accounts change. Server handlers use `requireUserSession()`
+rather than relying on client navigation guards. The TypeScript config references
+Nuxt's app, server, shared, and tooling projects.
+
+## Development checks
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm build:node
+```
+
+CI runs these checks without cloud credentials. The optional **Platform checks**
+workflow runs auth and SSR checks on Node, local Cloudflare D1, and Vercel's generated
+handler with local libSQL. Run it manually from GitHub Actions when changing
+deployment or auth code. It does not deploy to either provider.

@@ -1,0 +1,69 @@
+name: Platform checks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate ${{ matrix.platform }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [node, cloudflare, vercel]
+    env:
+      NUXT_BETTER_AUTH_SECRET: ci-only-not-for-runtime-1234567890
+      NUXT_PUBLIC_SITE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable && corepack install
+      - run: pnpm install --frozen-lockfile
+      - if: matrix.platform != 'cloudflare'
+        run: pnpm db:migrate
+      - run: pnpm build:${{ matrix.platform }}
+        env:
+          NUXT_HUB_CLOUDFLARE_DATABASE_ID: 00000000-0000-4000-8000-000000000012
+          TURSO_DATABASE_URL: ${{ matrix.platform == 'vercel' && 'libsql://ci-build-marker.turso.io' || '' }}
+          TURSO_AUTH_TOKEN: ${{ matrix.platform == 'vercel' && 'ci-build-token-must-not-be-bundled' || '' }}
+      - name: Check Vercel credential isolation
+        if: matrix.platform == 'vercel'
+        run: |
+          if grep -RalE 'ci-build-marker|ci-build-token-must-not-be-bundled' .vercel/output; then
+            echo 'Build-time database credentials were included in the Vercel output.'
+            exit 1
+          else
+            test "$?" -eq 1
+          fi
+      - name: Migrate local D1
+        if: matrix.platform == 'cloudflare'
+        run: pnpm exec wrangler d1 migrations apply DB --config .output/server/wrangler.json --local --persist-to "$RUNNER_TEMP/d1"
+      - name: Verify safe defaults, demo opt-in, and SSR
+        run: |
+          case '${{ matrix.platform }}' in
+            node)
+              node .output/server/index.mjs > "$RUNNER_TEMP/nuxt-smoke.log" 2>&1 &
+              ;;
+            cloudflare)
+              pnpm exec wrangler dev --config .output/server/wrangler.json --local --port 3000 --persist-to "$RUNNER_TEMP/d1" --var "NUXT_BETTER_AUTH_SECRET:$NUXT_BETTER_AUTH_SECRET" --var "NUXT_PUBLIC_SITE_URL:$NUXT_PUBLIC_SITE_URL" > "$RUNNER_TEMP/nuxt-smoke.log" 2>&1 &
+              ;;
+            vercel)
+              TURSO_DATABASE_URL=file:.data/db/sqlite.db node --input-type=module -e 'import { createServer } from "node:http"; import handler from "./.vercel/output/functions/__fallback.func/index.mjs"; createServer(handler).listen(3000)' > "$RUNNER_TEMP/nuxt-smoke.log" 2>&1 &
+              ;;
+          esac
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; cat "$RUNNER_TEMP/nuxt-smoke.log"' EXIT
+          pnpm smoke http://localhost:3000
+          if [ '${{ matrix.platform }}' = cloudflare ]; then
+            pnpm exec wrangler d1 execute DB --config .output/server/wrangler.json --local --persist-to "$RUNNER_TEMP/d1" --file scripts/demo-users.sql
+          else
+            pnpm db:seed:demo
+          fi
+          sleep 11
+          SMOKE_DEMO_ACCOUNTS=true pnpm smoke http://localhost:3000
