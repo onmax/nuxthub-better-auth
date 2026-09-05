@@ -13,7 +13,7 @@ definePageMeta({
         </h1>
       </template>
       <p class="text-muted">
-        This Nuxt 4 authentication template uses @nuxtjs/better-auth with NuxtHub. It includes deployment configs for Node with SQLite, Cloudflare with D1, and Vercel with Turso.
+        This page is public: you can visit it signed in or signed out. The User and Secret pages require a session, while Admin also requires the admin role.
       </p>
     </UCard>
   </UPageBody>

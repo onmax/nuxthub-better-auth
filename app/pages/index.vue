@@ -11,11 +11,11 @@ const signUpEmail = useSignUp('email')
 const tabs = [{
   slot: 'signin',
   label: 'Sign in',
-  icon: 'i-heroicons-user',
+  icon: 'i-lucide-user',
 }, {
   slot: 'signup',
   label: 'Sign up',
-  icon: 'i-heroicons-user-plus',
+  icon: 'i-lucide-user-plus',
 }]
 
 const email = ref('')
@@ -61,7 +61,7 @@ async function signUp() {
 }
 
 async function signInWithGitHub() {
-  if (isPending.value) return
+  if (!runtimeConfig.public.githubAuthEnabled || isPending.value) return
   await signInSocial.execute({ provider: 'github' })
   if (signInSocial.error.value) showError(signInSocial.error.value.message)
 }
@@ -158,14 +158,14 @@ async function signInWithGitHub() {
               Sign in
             </UButton>
             <UButton
+              v-if="runtimeConfig.public.githubAuthEnabled"
               icon="i-simple-icons-github"
               type="button"
               color="neutral"
               variant="outline"
               block
               :loading="signInSocial.status.value === 'pending'"
-              :disabled="isPending || !runtimeConfig.public.githubAuthEnabled"
-              :title="runtimeConfig.public.githubAuthEnabled ? undefined : 'GitHub OAuth is not configured for this demo'"
+              :disabled="isPending"
               @click="signInWithGitHub"
             >
               Sign in with GitHub

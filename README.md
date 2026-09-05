@@ -35,12 +35,13 @@ Use Node 22.19+, 24.11+, or 26+, with [Corepack](https://github.com/nodejs/corep
 Open [localhost:3000](http://localhost:3000). Create an account with the sign-up
 form or continue anonymously. The database is stored in `.data/db/sqlite.db`.
 
-New databases contain **no demo users or public-password accounts**.
+By default, new databases contain **no demo users or public-password accounts**.
 The initial migration creates a new schema; existing installations need a
 separate data-migration plan.
 `/user` and `/secret` require a session. `/admin` additionally requires the
-`admin` role. API handlers enforce these checks independently of page navigation.
-The example admin role can read the admin endpoint but cannot manage other users.
+`admin` role. These pages use Nuxt Better Auth's auth route rules.
+The example admin role can visit the admin page but cannot manage other users.
+`/about` is public, whether you are signed in or signed out.
 
 ## Deploy
 
@@ -122,33 +123,17 @@ client IP for rate limiting.
 
 ## Optional demo accounts
 
-Only seed a disposable demo or test database. Both accounts use the public
-password `nuxthub-demo`: `user@nuxthub.demo` and `admin@nuxthub.demo`.
+Set `NUXT_PUBLIC_DEMO_ACCOUNTS_ENABLED=true` in `.env` locally or in your
+deployment's runtime environment. This shows the User and Admin quick-login
+buttons and enables the Nitro seed plugin. After schema migrations, the first
+request automatically creates the demo accounts on SQLite, D1, or Turso.
+No separate seed command is needed.
 
-For local SQLite:
-
-```bash
-pnpm db:seed:demo
-```
-
-For a dedicated Turso demo database, set its `TURSO_DATABASE_URL` and
-`TURSO_AUTH_TOKEN` in `.env`, then run the same command. Existing process
-environment variables take precedence over `.env`. The seed command never
-loads `.env.local` implicitly.
-
-For a dedicated D1 demo database, build its config first, then run:
-
-```bash
-pnpm exec wrangler d1 execute DB --config .output/server/wrangler.json --remote --file scripts/demo-users.sql
-```
-
-Set `NUXT_PUBLIC_DEMO_ACCOUNTS_ENABLED=true` in the app's runtime environment to
-show the User and Admin quick-login buttons. Seeding and showing the buttons
-are separate opt-ins. Hiding the buttons does not remove accounts or disable
-their passwords.
-
-If upgrading an earlier demo deployment, its seeded users remain in the
-database. Use a fresh database for a real application.
+Use only a disposable demo database. Both `user@nuxthub.demo` and
+`admin@nuxthub.demo` use the public password `nuxthub-demo`. Restarts do not
+overwrite existing accounts. Turning the flag off hides the buttons and stops
+seeding, but does not remove accounts or disable their passwords.
+Use a fresh database for a real application.
 
 ## Optional GitHub OAuth
 
@@ -166,8 +151,9 @@ secret as a Worker secret or a private Vercel environment variable, never public
 runtime config. Previous deployments must rename `GITHUB_CLIENT_ID` and
 `GITHUB_CLIENT_SECRET` to their `NUXT_` equivalents.
 
-Users can link GitHub from `/user`. Test sign-in and linking with your own OAuth
-app before deployment. Do not link a personal GitHub account to a shared demo user.
+GitHub controls are hidden until enabled. Users can link GitHub from `/user`.
+Test sign-in and linking with your own OAuth app before deployment.
+Do not link a personal GitHub account to a shared demo user.
 
 ## Nuxt conventions
 
@@ -175,10 +161,10 @@ app before deployment. Do not link a personal GitHub account to a shared demo us
 `ref` state; action composables provide pending and error state. Do not copy the
 session into another store or a module-level ref.
 
-Relative `useFetch` requests forward cookies during SSR. User-specific keys keep
-data separate when accounts change. Server handlers use `requireUserSession()`
-rather than relying on client navigation guards. The TypeScript config references
-Nuxt's app, server, shared, and tooling projects.
+The linked-account `useFetch` forwards cookies during SSR and uses a user-specific
+key. Page access uses auth route rules. When adding private API handlers, use
+`requireUserSession(event)` to enforce access server-side. The TypeScript config
+references Nuxt's app, server, shared, and tooling projects.
 
 ## Development checks
 
@@ -188,7 +174,4 @@ pnpm typecheck
 pnpm build:node
 ```
 
-CI runs these checks without cloud credentials. The optional **Platform checks**
-workflow runs auth and SSR checks on Node, local Cloudflare D1, and Vercel's generated
-handler with local libSQL. Run it manually from GitHub Actions when changing
-deployment or auth code. It does not deploy to either provider.
+CI runs these checks without cloud credentials.

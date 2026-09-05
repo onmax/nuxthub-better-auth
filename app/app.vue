@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const { loggedIn, user, fetchSession } = useUserSession()
 const toast = useToast()
-const logoutAction = useAuthClientAction(client => user.value?.isAnonymous ? client.deleteAnonymousUser : client.signOut)
+const { execute: signOut, status: signOutStatus, error: signOutError } = useAuthClientAction(client => user.value?.isAnonymous ? client.deleteAnonymousUser : client.signOut)
 
 const headerLinks = [
   { label: 'Home', to: '/' },
@@ -18,10 +18,10 @@ const footerLinks = [
   { label: 'Nuxt UI', to: 'https://ui.nuxt.com', target: '_blank' },
 ]
 
-async function logout() {
-  if (logoutAction.status.value === 'pending') return
+async function onSignOut() {
+  if (signOutStatus.value === 'pending') return
 
-  await logoutAction.execute({
+  await signOut({
     fetchOptions: {
       onSuccess: async () => {
         await fetchSession({ force: true })
@@ -30,8 +30,8 @@ async function logout() {
     },
   })
 
-  if (logoutAction.error.value) {
-    toast.add({ title: logoutAction.error.value.message, color: 'error' })
+  if (signOutError.value) {
+    toast.add({ title: signOutError.value.message, color: 'error' })
   }
 }
 </script>
@@ -55,8 +55,8 @@ async function logout() {
         <UButton
           v-if="loggedIn"
           color="neutral"
-          :loading="logoutAction.status.value === 'pending'"
-          @click="logout"
+          :loading="signOutStatus === 'pending'"
+          @click="onSignOut"
         >
           Sign out
         </UButton>

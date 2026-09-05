@@ -13,12 +13,9 @@
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
     "db:generate": "nuxt db generate",
-    "db:migrate": "nuxt db migrate",
-    "db:seed:demo": "node --env-file-if-exists=.env scripts/seed-demo.mjs",
-    "smoke": "node scripts/smoke-auth.mjs"
+    "db:migrate": "nuxt db migrate"
   },
   "dependencies": {
-    "@iconify-json/heroicons": "1.2.3",
     "@iconify-json/lucide": "1.2.129",
     "@iconify-json/simple-icons": "1.2.94",
     "@libsql/client": "0.18.0",
@@ -29,6 +26,7 @@
     "better-auth": "1.7.2",
     "drizzle-orm": "0.45.2",
     "nuxt": "4.5.2",
+    "tailwindcss": "4.3.3",
     "vue": "3.5.42",
     "vue-router": "5.3.1"
   },

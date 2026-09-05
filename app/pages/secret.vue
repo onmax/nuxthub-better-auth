@@ -1,32 +1,14 @@
-<script setup lang="ts">
-const { user } = useUserSession()
-const { data, status, error, refresh } = await useFetch('/api/secret', {
-  key: computed(() => `secret:${user.value?.id ?? 'guest'}`),
-})
-</script>
-
 <template>
   <UPageBody>
     <UCard class="mx-auto mt-8 max-w-2xl">
       <template #header>
         <h1 class="text-2xl font-bold">
-          Protected user endpoint
+          Protected page
         </h1>
       </template>
       <p class="text-muted">
-        Nuxt Better Auth protects this page and its API with the current server-side session.
+        This page requires an active session. Nuxt Better Auth applies the auth route rule before rendering it.
       </p>
-      <UAlert
-        v-if="error"
-        class="mt-4"
-        color="error"
-        title="Could not load protected data"
-        :actions="[{ label: 'Retry', onClick: () => refresh() }]"
-      />
-      <p v-else-if="status === 'pending'" class="mt-4 text-muted" role="status">
-        Loading protected data…
-      </p>
-      <pre v-else class="mt-4 overflow-auto text-xs">{{ data }}</pre>
     </UCard>
   </UPageBody>
 </template>

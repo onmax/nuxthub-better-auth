@@ -6,20 +6,22 @@ const runtimeConfig = useRuntimeConfig()
 const toast = useToast()
 const linkGitHub = useAuthClientAction(client => client.linkSocial)
 
-const { data: accounts, status: accountsStatus, error: accountsError, refresh: refreshAccounts } = await useFetch<Pick<Account, 'providerId'>[]>('/api/auth/list-accounts', {
-  key: computed(() => `accounts:${user.value?.id ?? 'guest'}`),
-  default: () => [],
-})
-
 const isAnonymous = computed(() => Boolean(user.value?.isAnonymous))
 const isAdmin = computed(() => user.value?.role === 'admin')
+const showGitHubAccount = computed(() => runtimeConfig.public.githubAuthEnabled && !!user.value && !isAnonymous.value)
+
+const { data: accounts, status: accountsStatus, error: accountsError, refresh: refreshAccounts } = await useFetch<Pick<Account, 'providerId'>[]>('/api/auth/list-accounts', {
+  key: computed(() => `accounts:${user.value?.id ?? 'guest'}`),
+  enabled: showGitHubAccount,
+  default: () => [],
+})
 
 function hasProvider(provider: string) {
   return accounts.value.some(account => account.providerId === provider)
 }
 
 async function linkAccount() {
-  if (accountsStatus.value !== 'success' || linkGitHub.status.value === 'pending') return
+  if (!showGitHubAccount.value || accountsStatus.value !== 'success' || linkGitHub.status.value === 'pending') return
   await linkGitHub.execute({ provider: 'github', callbackURL: '/user' })
   if (linkGitHub.error.value) {
     toast.add({ title: linkGitHub.error.value.message, color: 'error' })
@@ -47,26 +49,36 @@ onMounted(() => {
         Nuxt Better Auth loaded this session on the server. NuxtHub stores it in the database configured for this deployment.
       </p>
 
-      <div class="mt-6 grid gap-4 md:grid-cols-2">
-        <UCard>
-          <template #header>
-            <h2 class="font-semibold">
+      <UCard class="mt-6">
+        <p class="font-semibold break-words">
+          {{ user?.name }}
+        </p>
+        <p class="mt-1 text-sm text-muted break-all">
+          {{ user?.email }}
+        </p>
+      </UCard>
+
+      <details class="mt-4 rounded-lg border border-default p-4">
+        <summary class="cursor-pointer font-medium">
+          Session details
+        </summary>
+        <div class="mt-4 grid gap-4 md:grid-cols-2">
+          <div class="min-w-0">
+            <h2 class="text-sm font-semibold">
               User
             </h2>
-          </template>
-          <pre class="overflow-auto text-xs">{{ user }}</pre>
-        </UCard>
-        <UCard>
-          <template #header>
-            <h2 class="font-semibold">
+            <pre class="mt-2 overflow-auto text-xs">{{ user }}</pre>
+          </div>
+          <div class="min-w-0">
+            <h2 class="text-sm font-semibold">
               Session
             </h2>
-          </template>
-          <pre class="overflow-auto text-xs">{{ session }}</pre>
-        </UCard>
-      </div>
+            <pre class="mt-2 overflow-auto text-xs">{{ session }}</pre>
+          </div>
+        </div>
+      </details>
 
-      <UCard v-if="runtimeConfig.public.githubAuthEnabled && !isAnonymous" class="mt-4">
+      <UCard v-if="showGitHubAccount" class="mt-4">
         <template #header>
           <h2 class="font-semibold">
             GitHub account
@@ -83,7 +95,7 @@ onMounted(() => {
           color="neutral"
           variant="soft"
           icon="i-simple-icons-github"
-          trailing-icon="i-heroicons-check"
+          trailing-icon="i-lucide-check"
           disabled
         >
           Linked with GitHub
