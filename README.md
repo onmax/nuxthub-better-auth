@@ -100,9 +100,10 @@ pnpm dlx vercel@latest deploy --prod
 
 Configure a separate secret and database for previews. Check the integration's
 environment assignments; previews must not point at the production database.
-For changing preview URLs, leave `NUXT_PUBLIC_SITE_URL` unset so the auth module
-uses the request origin. For OAuth previews, use a stable preview origin and
-register its callback with GitHub. Local development uses `.env` as described above.
+Set `NUXT_PUBLIC_SITE_URL` to the preview's HTTPS origin. Without an explicit URL,
+the auth module uses Vercel's platform URL; it does not trust the request host in
+production. For OAuth previews, use a stable preview origin and register its
+callback with GitHub. Local development uses `.env` as described above.
 
 The `env -u` arguments preserve the downloaded Turso credentials but prevent
 the migration command from being treated as a Vercel build. Builds deliberately
