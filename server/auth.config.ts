@@ -14,11 +14,6 @@ export default defineServerAuth(({ runtimeConfig }) => ({
         },
       }
     : undefined,
-  account: {
-    accountLinking: {
-      enabled: true,
-    },
-  },
   rateLimit: {
     enabled: true,
     storage: 'database',

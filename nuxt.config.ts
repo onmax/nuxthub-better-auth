@@ -50,10 +50,8 @@ export default defineNuxtConfig({
   },
 
   auth: {
-    hubSecondaryStorage: false,
     redirects: {
       login: '/',
-      guest: '/',
       authenticated: '/user',
       logout: '/',
     },
