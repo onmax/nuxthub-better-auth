@@ -49,7 +49,7 @@ Use separate database environments for development, previews, and production.
 Apply schema migrations before each deployment. Neither deployment path requires
 the optional demo accounts.
 
-The template uses Nuxt Better Auth 0.3.12 and a single initial migration for
+The template uses Nuxt Better Auth 0.3.11 and a single initial migration for
 Better Auth 1.7.12. Databases from earlier PR previews that still have
 `account.issuer` need the [Better Auth upgrade steps](https://www.better-auth.com/docs/guides/1-7-upgrade-guide#account-identity-keeps-the-provider-key)
 before updating; the initial migration does not upgrade existing tables.

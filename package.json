@@ -23,7 +23,7 @@
     "@nuxt/eslint": "1.17.0",
     "@nuxt/ui": "4.12.0",
     "@nuxthub/core": "0.10.10",
-    "@nuxtjs/better-auth": "0.3.12",
+    "@nuxtjs/better-auth": "0.3.11",
     "better-auth": "1.7.12",
     "drizzle-orm": "0.45.4",
     "nuxt": "4.6.2",
@@ -32,7 +32,6 @@
     "vue-router": "5.4.0"
   },
   "devDependencies": {
-    "auth": "1.7.12",
     "drizzle-kit": "0.31.11",
     "eslint": "10.13.0",
     "typescript": "5.9.3",
