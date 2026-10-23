@@ -39,10 +39,10 @@ async function onSignOut() {
 <template>
   <UApp>
     <NuxtRouteAnnouncer />
-    <NuxtLoadingIndicator />
+    <NuxtLoadingIndicator color="var(--ui-primary)" />
     <UHeader>
       <template #title>
-        <span class="flex items-center gap-2">
+        <span class="flex items-baseline gap-2">
           <img src="/logo-green-black.svg" alt="Nuxt" class="h-6 w-auto dark:hidden">
           <img src="/logo-green-white.svg" alt="Nuxt" class="hidden h-6 w-auto dark:block">
           <span class="font-heading font-medium text-highlighted">Better Auth</span>

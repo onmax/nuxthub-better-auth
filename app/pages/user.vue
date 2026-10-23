@@ -68,25 +68,33 @@ onMounted(() => {
           </p>
         </UCard>
 
-        <details class="rounded-lg border border-default p-4">
-          <summary class="cursor-pointer text-sm font-medium">
-            Session Details
-          </summary>
-          <div class="mt-4 grid gap-4 md:grid-cols-2">
-            <div class="min-w-0">
-              <h2 class="text-sm">
-                User
-              </h2>
-              <pre class="mt-2 overflow-auto text-xs text-muted">{{ user }}</pre>
+        <UCollapsible>
+          <UButton
+            label="Session Details"
+            color="neutral"
+            variant="subtle"
+            trailing-icon="i-lucide-chevron-down"
+            block
+            class="group justify-between"
+            :ui="{ trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200' }"
+          />
+          <template #content>
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+              <div class="min-w-0">
+                <h2 class="text-sm">
+                  User
+                </h2>
+                <pre class="mt-2 overflow-auto text-xs text-muted">{{ user }}</pre>
+              </div>
+              <div class="min-w-0">
+                <h2 class="text-sm">
+                  Session
+                </h2>
+                <pre class="mt-2 overflow-auto text-xs text-muted">{{ session }}</pre>
+              </div>
             </div>
-            <div class="min-w-0">
-              <h2 class="text-sm">
-                Session
-              </h2>
-              <pre class="mt-2 overflow-auto text-xs text-muted">{{ session }}</pre>
-            </div>
-          </div>
-        </details>
+          </template>
+        </UCollapsible>
 
         <UCard v-if="showGitHubAccount">
           <template #header>
